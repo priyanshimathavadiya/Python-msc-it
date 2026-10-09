@@ -1,196 +1,156 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
-import sqlite3
+import jwt
+from datetime import datetime, timedelta, timezone
+ 
+app = FastAPI(title="JWT Authentication API")
 
-app = FastAPI()
+SECRET_KEY = "my-super-secret-key-for-fastapi-jwt-2026-very-secure"
+ALGORITHM = "HS256"
+TOKEN_EXPIRE_MINUTES = 30
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-# DATABASE
-def get_db():
-    return sqlite3.connect("todo.db")
-
-
-conn = get_db()
-
-conn.execute("""
-CREATE TABLE IF NOT EXISTS todoapp (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    priority TEXT NOT NULL,
-    is_completed BOOLEAN NOT NULL,
-    due_date TEXT NOT NULL
-)
-""")
-
-conn.commit()
-conn.close()
+users_db = {}
 
 
-# DATA MODEL
-class Todo(BaseModel):
-    title: str
-    description: str
-    priority: str
-    is_completed: bool
-    due_date: str
+class UserSignup(BaseModel):
+    username: str
+    password: str
+    full_name: str
 
 
-# GET - All Tasks
-@app.get("/task")
-def get_tasks():
-
-    conn = get_db()
-
-    tasks = conn.execute("""
-        SELECT id, title, description, priority,
-               is_completed, due_date
-        FROM todoapp
-    """).fetchall()
-
-    conn.close()
-
-    return [
-        {
-            "id": task[0],
-            "title": task[1],
-            "description": task[2],
-            "priority": task[3],
-            "is_completed": bool(task[4]),
-            "due_date": task[5]
-        }
-        for task in tasks
-    ]
+class UserLogin(BaseModel):
+    username: str
+    password: str
 
 
-# GET - One Task
-@app.get("/task/{task_id}")
-def get_task(task_id: int):
+@app.post("/register")
+def register(user: UserSignup):
 
-    conn = get_db()
-
-    task = conn.execute("""
-        SELECT id, title, description, priority,
-               is_completed, due_date
-        FROM todoapp
-        WHERE id = ?
-    """, (task_id,)).fetchone()
-
-    conn.close()
-
-    if not task:
+    if user.username in users_db:
         raise HTTPException(
-            status_code=404,
-            detail="Task not found"
+            status_code=400,
+            detail="Username already exists"
         )
 
+    users_db[user.username] = {
+        "username": user.username,
+        "password": user.password,
+        "full_name": user.full_name
+    }
+
+    print("User registered:", user.username)
+
     return {
-        "id": task[0],
-        "title": task[1],
-        "description": task[2],
-        "priority": task[3],
-        "is_completed": bool(task[4]),
-        "due_date": task[5]
+        "message": "User registered successfully",
+        "username": user.username
     }
 
 
-# POST - Add Task
-@app.post("/task")
-def add_task(todo: Todo):
+@app.post("/login")
+def login(user: UserLogin):
 
-    conn = get_db()
+    print("Login username:", user.username)
 
-    cursor = conn.execute("""
-        INSERT INTO todoapp
-        (title, description, priority, is_completed, due_date)
-        VALUES (?, ?, ?, ?, ?)
-    """, (
-        todo.title,
-        todo.description,
-        todo.priority,
-        todo.is_completed,
-        todo.due_date
-    ))
+    db_user = users_db.get(user.username)
 
-    conn.commit()
+    if not db_user:
+        print("Username not found:", user.username)
 
-    task_id = cursor.lastrowid
-
-    conn.close()
-
-    return {
-        "message": "Task added successfully",
-        "id": task_id
-    }
-
-
-@app.put("/task/{task_id}")
-def update_task(task_id: int, todo: Todo):
-
-    conn = get_db()
-
-    task = conn.execute(
-        "SELECT id FROM todoapp WHERE id = ?",
-        (task_id,)
-    ).fetchone()
-
-    if not task:
-        conn.close()
         raise HTTPException(
-            status_code=404,
-            detail="Task not found"
+            status_code=401,
+            detail="Invalid username or password"
         )
 
-    conn.execute("""
-        UPDATE todoapp
-        SET title = ?,
-            description = ?,
-            priority = ?,
-            is_completed = ?,
-            due_date = ?
-        WHERE id = ?
-    """, (
-        todo.title,
-        todo.description,
-        todo.priority,
-        todo.is_completed,
-        todo.due_date,
-        task_id
-    ))
+    if user.password != db_user["password"]:
+        print("Wrong password for:", user.username)
 
-    conn.commit()
-    conn.close()
-
-    return {
-        "message": "Task updated successfully"
-    }
-
-# DELETE - Delete Task
-@app.delete("/task/{task_id}")
-def delete_task(task_id: int):
-
-    conn = get_db()
-
-    task = conn.execute(
-        "SELECT id FROM todoapp WHERE id = ?",
-        (task_id,)
-    ).fetchone()
-
-    if not task:
-        conn.close()
         raise HTTPException(
-            status_code=404,
-            detail="Task not found"
+            status_code=401,
+            detail="Invalid username or password"
         )
 
-    conn.execute(
-        "DELETE FROM todoapp WHERE id = ?",
-        (task_id,)
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=TOKEN_EXPIRE_MINUTES
     )
 
-    conn.commit()
-    conn.close()
+    payload = {
+        "sub": user.username,
+        "name": db_user["full_name"],
+        "exp": expire
+    }
+
+    token = jwt.encode(
+        payload,
+        SECRET_KEY,
+        algorithm=ALGORITHM
+    )
+
+    print("User logged in:", user.username)
+    print("JWT token generated for:", user.username)
 
     return {
-        "message": "Task deleted successfully"
+        "access_token": token,
+        "token_type": "bearer"
+    }
+
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme)
+):
+
+    try:
+
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+
+        username = payload.get("sub")
+
+        if username is None:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid token"
+            )
+
+        user = users_db.get(username)
+
+        if user is None:
+            raise HTTPException(
+                status_code=401,
+                detail="User not found"
+            )
+
+        return user
+
+    except jwt.ExpiredSignatureError:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Token has expired"
+        )
+
+    except jwt.InvalidTokenError:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token"
+        )
+
+
+@app.get("/profile")
+def profile(
+    current_user: dict = Depends(get_current_user)
+):
+
+    print("Profile accessed by:", current_user["username"])
+
+    return {
+        "message": "Authentication successful",
+        "username": current_user["username"],
+        "full_name": current_user["full_name"]
     }
