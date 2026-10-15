@@ -1,0 +1,189 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TO-DO List</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="site-header">
+    <div class="header-content">
+        <h1>TO-DO List</h1>
+        <p>Manage your daily tasks easily</p>
+    </div>
+</header>
+
+<main class="container">
+
+    <section class="panel">
+        <p class="eyebrow">PLAN YOUR DAY</p>
+        <h2>Add a New Task</h2>
+
+        <form action="{{ url_for('add') }}" method="POST" class="task-form">
+
+            <div class="form-field full-width">
+                <label for="title">Task Title</label>
+                <input type="text" id="title" name="title"
+                       maxlength="150" required
+                       placeholder="Complete Python Assignment">
+            </div>
+
+            <div class="form-field full-width">
+                <label for="description">Description</label>
+                <textarea id="description" name="description"
+                          maxlength="300" rows="3"
+                          placeholder="Enter task details"></textarea>
+            </div>
+
+            <div class="form-field">
+                <label for="priority">Priority</label>
+                <select id="priority" name="priority" required>
+                    <option value="High">High</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="Low">Low</option>
+                </select>
+            </div>
+
+            <div class="form-field">
+                <label for="due_date">Due Date</label>
+                <input type="date" id="due_date"
+                       name="due_date" required>
+            </div>
+
+            <div class="full-width">
+                <button type="submit" class="button button-primary">
+                    + Add Task
+                </button>
+            </div>
+
+        </form>
+    </section>
+
+    <section class="task-section">
+        <h2>Pending Tasks
+            <span class="count">{{ pending_tasks|length }}</span>
+        </h2>
+
+        {% if pending_tasks %}
+        <div class="task-grid">
+
+            {% for task in pending_tasks %}
+            <article class="task-card">
+
+                <div class="task-card-top">
+                    <span class="priority-badge priority-{{ task.priority|lower }}">
+                        {{ task.priority }}
+                    </span>
+                    <span class="status-label pending-label">Pending</span>
+                </div>
+
+                <h3>{{ task.title }}</h3>
+
+                {% if task.description %}
+                <p class="task-description">{{ task.description }}</p>
+                {% endif %}
+
+                <p class="due-date">
+                    Due: {{ task.due_date.strftime('%d %b %Y') }}
+                </p>
+
+                <div class="task-actions">
+                    <a class="button button-complete"
+                       href="{{ url_for('toggle', id=task.id) }}">
+                        Mark Completed
+                    </a>
+
+                    <a class="button button-light"
+                       href="{{ url_for('edit', id=task.id) }}">
+                        Edit
+                    </a>
+
+                    <form action="{{ url_for('delete', id=task.id) }}"
+                          method="POST"
+                          onsubmit="return confirm('Delete this task?');">
+                        <button type="submit" class="button button-delete">
+                            Delete
+                        </button>
+                    </form>
+                </div>
+
+            </article>
+            {% endfor %}
+
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No Pending Tasks</h3>
+            <p>Add a task using the form above.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="task-section">
+        <h2>Completed Tasks
+            <span class="count">{{ completed_tasks|length }}</span>
+        </h2>
+
+        {% if completed_tasks %}
+        <div class="task-grid">
+
+            {% for task in completed_tasks %}
+            <article class="task-card completed-card">
+
+                <div class="task-card-top">
+                    <span class="priority-badge priority-{{ task.priority|lower }}">
+                        {{ task.priority }}
+                    </span>
+                    <span class="status-label completed-label">Completed</span>
+                </div>
+
+                <h3 class="completed-title">{{ task.title }}</h3>
+
+                {% if task.description %}
+                <p class="task-description">{{ task.description }}</p>
+                {% endif %}
+
+                <p class="due-date">
+                    Due: {{ task.due_date.strftime('%d %b %Y') }}
+                </p>
+
+                <div class="task-actions">
+                    <a class="button button-light"
+                       href="{{ url_for('toggle', id=task.id) }}">
+                        Mark Pending
+                    </a>
+
+                    <a class="button button-light"
+                       href="{{ url_for('edit', id=task.id) }}">
+                        Edit
+                    </a>
+
+                    <form action="{{ url_for('delete', id=task.id) }}"
+                          method="POST"
+                          onsubmit="return confirm('Delete this task?');">
+                        <button type="submit" class="button button-delete">
+                            Delete
+                        </button>
+                    </form>
+                </div>
+
+            </article>
+            {% endfor %}
+
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>No completed tasks yet.</p>
+        </div>
+        {% endif %}
+    </section>
+
+</main>
+
+<footer>Copyright © 2026 · TO-DO List</footer>
+
+</body>
+</html>
