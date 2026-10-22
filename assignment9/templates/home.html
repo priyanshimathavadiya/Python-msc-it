@@ -1,0 +1,152 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Task Tracker</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 0;
+            padding: 25px;
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+        body.dark {
+            background: #111827;
+            color: #f9fafb;
+        }
+        .container { max-width: 900px; margin: auto; }
+        .panel, .task {
+            background: white;
+            color: #1e293b;
+            padding: 18px;
+            margin: 15px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px #0001;
+        }
+        body.dark .panel, body.dark .task {
+            background: #1f2937;
+            color: #f9fafb;
+        }
+        input, textarea, select, button {
+            padding: 10px;
+            margin: 5px 0;
+            box-sizing: border-box;
+            border-radius: 5px;
+        }
+        input, textarea, select { width: 100%; }
+        button, .btn {
+            background: #2563eb;
+            color: white;
+            border: 0;
+            padding: 9px 12px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            border-radius: 5px;
+        }
+        .delete { background: #dc2626; }
+        .complete { background: #15803d; }
+        .top {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .High { color: #dc2626; }
+        .Medium { color: #d97706; }
+        .Low { color: #16a34a; }
+    </style>
+</head>
+<body class="{{ 'dark' if theme == 'dark' else '' }}">
+<div class="container">
+
+    <div class="top">
+        <div>
+            <h1>Personal Task Tracker</h1>
+            <p>Welcome, {{ username }}!</p>
+        </div>
+        <div>
+            <a class="btn" href="/set-theme/light">Light</a>
+            <a class="btn" href="/set-theme/dark">Dark</a>
+            <a class="btn delete" href="/logout">Logout</a>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>Add New Task</h2>
+        <form action="/add" method="post">
+            <input type="text" name="title"
+                   placeholder="Task title (required)"
+                   maxlength="150" required>
+
+            <textarea name="description"
+                      placeholder="Task description"
+                      maxlength="300"></textarea>
+
+            <select name="priority">
+                <option value="High">High Priority</option>
+                <option value="Medium" selected>Medium Priority</option>
+                <option value="Low">Low Priority</option>
+            </select>
+
+            <button type="submit">Add Task</button>
+        </form>
+    </div>
+
+    <h2>Pending Tasks ({{ pending_tasks|length }})</h2>
+
+    {% for task in pending_tasks %}
+    <div class="task">
+        <h3>{{ task.title }}</h3>
+        <p>{{ task.description }}</p>
+        <p>
+            Priority:
+            <strong class="{{ task.priority }}">{{ task.priority }}</strong>
+        </p>
+        <small>Created: {{ task.created_at.strftime('%d-%m-%Y %H:%M') }}</small>
+
+        <div class="actions">
+            <a class="btn complete" href="/toggle/{{ task.id }}">Complete</a>
+            <a class="btn" href="/edit/{{ task.id }}">Edit</a>
+            <form action="/delete/{{ task.id }}" method="post"
+                  onsubmit="return confirm('Delete this task?')">
+                <button class="delete" type="submit">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <p>No pending tasks.</p>
+    {% endfor %}
+
+    <h2>Completed Tasks ({{ completed_tasks|length }})</h2>
+
+    {% for task in completed_tasks %}
+    <div class="task">
+        <h3>{{ task.title }}</h3>
+        <p>{{ task.description }}</p>
+        <p>
+            Priority:
+            <strong class="{{ task.priority }}">{{ task.priority }}</strong>
+        </p>
+        <small>Created: {{ task.created_at.strftime('%d-%m-%Y %H:%M') }}</small>
+
+        <div class="actions">
+            <a class="btn" href="/toggle/{{ task.id }}">Mark Pending</a>
+            <a class="btn" href="/edit/{{ task.id }}">Edit</a>
+            <form action="/delete/{{ task.id }}" method="post"
+                  onsubmit="return confirm('Delete this task?')">
+                <button class="delete" type="submit">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <p>No completed tasks.</p>
+    {% endfor %}
+
+</div>
+</body>
+</html>

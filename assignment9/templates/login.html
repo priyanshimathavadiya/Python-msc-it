@@ -1,0 +1,53 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Tracker - Login</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #eef2f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .box {
+            background: white;
+            padding: 35px;
+            border-radius: 12px;
+            width: 320px;
+            box-shadow: 0 5px 20px #0002;
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            box-sizing: border-box;
+            border-radius: 6px;
+        }
+        input { border: 1px solid #ccc; }
+        button {
+            background: #2563eb;
+            color: white;
+            border: 0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Personal Task Tracker</h2>
+        <p>Enter your name to continue.</p>
+        <form action="/login" method="post">
+            <input type="text" name="username"
+                   placeholder="Enter your name"
+                   maxlength="100" required>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+</body>
+</html>
